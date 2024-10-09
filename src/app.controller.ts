@@ -1,12 +1,24 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Body, Controller, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { CriarFilaAtendimentoDto } from './dtos/criar-fila-dto';
 
-@Controller()
+@Controller('fila-atendimento')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  private clienteAdminBackend: ClientProxy;
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  constructor() {
+    this.clienteAdminBackend = ClientProxyFactory.create({
+      transport: Transport.RMQ,
+      options: {
+        urls: ['amqp://admin:123456@localhost:5672/arquivoprojetormq'],
+        queue: 'admin-backend',
+      },
+    });
+  }
+
+  @Post('criar')
+  @UsePipes(ValidationPipe)
+  async criarFilaAtendimento(@Body() criarFilaAtendimentoDto: CriarFilaAtendimentoDto) {
+    return await this.clienteAdminBackend.emit('criar-fila-atendimento', criarFilaAtendimentoDto);
   }
 }
